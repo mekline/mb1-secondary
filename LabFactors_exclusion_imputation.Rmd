@@ -1,0 +1,429 @@
+---
+title: "MB1 Exclusions"
+author: "The ManyBabies Analysis Team"
+date: '`r format(Sys.time(), "%a %b %d %X %Y")`'
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: yes
+---
+
+
+# Intro
+
+This script represents the start of the MB1 secondary 'lab factors' analysis; it begins from the variable-validation intermediate dataset `02_validated_output.csv` and outputs two datafiles:
+
+1. `03_data_participants_effsize_allvars.csv`, start with the data inclusions used for MB1, then  fills in *all* participant-level variables for trials that are implicitly missing and calculates effect sizes and
+2. `03_data_trial_missingness_allvars.csv`, which additionally includes participants that did not contribute
+enough trials (including contributing no trials!) to be included in the main dataset. 
+
+In both cases, we also merge on the lab-level characteristics collected from before
+and after data collection ('The Qualtrics Surveys')
+
+The first file will be used to calculate the subject-level mean effect size for those participants who have one
+(DV#2 in the preregistration) while the second will be used for analysis of missingness (DV#1) over all
+participants. Note that while all analyses here are to be conducted in the LMEMs framework, file #1 
+(as with MB1) contains those participants who met the 'usable pair' criteria; both #1 and #2 exclude at
+participant and lab level in the same way as the main project; the primary difference is in how trial exclusions
+are treated!
+
+
+```{r setup, echo=FALSE, message=FALSE}
+source(here::here("helper/common.R"))
+source(here("helper/preprocessing_helper.R"))
+source(here("helper/secondary_helper.R"))
+```
+
+# Exclusions
+
+We combine the files `03_exclusion.Rmd` and `paper/exclusions.Rmd` to form a single file!
+
+```{r read_data}
+d <- read_csv(here("processed_data","02_validated_output.csv"))
+source(here("helper/preprocessing_helper.R"))
+```
+
+```{r lab_stats}
+# Cache lab stats pre-exclusion for lab-based exclusions. 
+
+lab_contribs_pre_exclusion <- d %>%
+  group_by(lab) %>%
+  summarise(n = length(unique(subid)))
+```
+
+```{r pilot}
+# We exclude kids who are explicitly marked as pilot.
+d <- exclude_by(d, quo(pilot), quiet = TRUE)
+```
+
+
+```{r age}
+# We exclude kids who are outside of the 3-15 month age range. 
+d$out_of_age <- d$age_mo < 3 | d$age_mo > 15 | is.na(d$age_mo)
+
+d <- exclude_by(d, quo(out_of_age), quiet=TRUE)
+```
+
+
+```{r}
+mono <- exclude_by(d, quo(monolingual), action = "include", 
+                   return_pcts = TRUE, 
+                   quiet = TRUE)
+d <- mono$data
+```
+
+* *Monolingual*. Monolingual infants of any language background were included in the sample. Monolingual was defined as 90% parent-reported exposure to the native language. This cutoff score struck a balance between including most infants who are typically considered monolingual in infant language studies, while excluding those who might be considered bilingual [@byers2015methods]. `r mono$percents$any_sum` (`r round(mono$percents$any_mean*100, 2)`%) infants were tested but did not meet this criterion.
+
+
+```{r}
+full_term <- exclude_by(d, quo(full_term), action = "include", 
+                return_pcts = TRUE, 
+                quiet = TRUE)
+
+d <- full_term$data
+```
+
+* *Full-term*. We defined full term as gestation times greater than or equal to 37 weeks. Of the remaining sample, `r full_term$percents$any_sum` (`r round(full_term$percents$any_mean*100, 2)`%) infants were tested but did not meet this criterion.
+
+```{r}
+ndd <- exclude_by(d, quo(td), action = "include", 
+                return_pcts = TRUE, 
+                quiet = TRUE)
+
+d <- ndd$data
+```
+
+* *No diagnosed developmental disorders*. We excluded infants with parent-reported developmental disorders (e.g., chromosomal abnormalities) or diagnosed hearing impairments. Of the remaining sample, `r ndd$percents$any_sum` (`r round(ndd$percents$any_mean*100, 2)`%) infants were tested but did not meet this criterion. Due to concerns about the accuracy of parent reports, we did not exclude infants based on parent-reported ear infections unless parents reported medically-confirmed hearing loss. 
+
+
+```{r usable_pairs}
+all_trials <- d
+
+usable_pairs <- d %>%
+  filter(trial_type != "TRAIN") %>%
+  group_by(lab, subid, stimulus_num) %>%
+  summarise(n_usable = sum(!is.na(looking_time))) %>%
+  summarise(usable_pair = any(n_usable == 2))
+```
+
+
+```{r usable_pairs2}
+d <- d %>% 
+  left_join(usable_pairs) 
+
+usablepair <- exclude_by(d, quo(usable_pair), action = "include", 
+                         return_pcts = TRUE, 
+                         quiet = TRUE)
+
+d <- usablepair$data
+
+# At this point, d is the main dataset; all_trials is the dataset with 'ragged' trial data still included
+```
+
+* *Contributed usable data*. A child must have contributed non-zero looking time on a pair of test trials (i.e., one trial each of IDS and ADS from a particular stimulus pair), after trial-level exclusions were applied, to be included in the study. We retain this restriction for the subject-level/effect size dataset (and will apply additional restrictions below!)
+
+```{r}
+#store an additional dataframe containing information on session error types
+session_error_type <- d %>%
+  filter(session_error) %>%
+  distinct(lab, subid,session_error_type_recoded) %>%
+  count(session_error_type_recoded)
+
+sessionerr <- exclude_by(d, quo(session_error), 
+                         action = "exclude", 
+                         return_pcts = TRUE, 
+                         quiet = TRUE)
+
+d <- sessionerr$data
+
+#And the same for all_trials
+session_error_type <- all_trials %>%
+  filter(session_error) %>%
+  distinct(lab, subid,session_error_type_recoded) %>%
+  count(session_error_type_recoded)
+
+sessionerr <- exclude_by(all_trials, quo(session_error), 
+                         action = "exclude", 
+                         return_pcts = TRUE, 
+                         quiet = TRUE)
+
+all_trials <- sessionerr$data
+
+```
+
+After these exclusions were applied, participants could also be excluded for analysis based on session-level errors, including: equipment error (e.g., no sound or visuals on the first pair of trials), experimenter error (e.g., an experimenter was unblinded in setups where infant looking was measured by live button press), or evidence of consistent parent/outside interference noted by participating labs (e.g., talking or pointing by parents, construction noise, sibling pounding on door). `r sessionerr$percents$any_sum` (`r round(sessionerr$percents$any_mean*100, 2)`%) infants for whom we had other reported data were dropped from analysis due to session-level error. This number is likely an underestimate, however. Many participating labs did not provide data for all children with session-level errors; in addition, session-level errors were not classified consistently across labs, so an accurate classification of the proportion of different types of errors was not possible. 
+
+
+```{r trial_errors}
+trial_err <- exclude_by(d, quo(trial_error), 
+                  setting = "any", 
+                  return_pcts = TRUE, 
+                  quiet = TRUE)
+
+d <- trial_err$data
+
+all_trials <- all_trials #trial error will need excluded correctly below for this set
+```
+
+For the MB1 dataset, we further excluded individual trials that were reported as having issues (e.g., fussiness, incorrect stimulus, single instance of parent or sibling interference). A total of `r trial_err$percent_trials$trial_sum` (`r round(trial_err$percent_trials$trial_mean*100,2)`%) trials were affected by such errors. As with session level errors, classification of these was inconsistent across participating labs, but the most common source of trial-level errors was infant fussiness.
+
+For the expanded dataset, we still wish to exclude the non-fussiness trials (i.e. NOT count these as instances of missing = TRUE), but will wait until the missing-trial problem is solved below. 
+
+
+```{r}
+d$short_lt <- d$looking_time < 2
+
+short_lt <- exclude_by(d, quo(short_lt), action = "NA out", 
+                   return_pcts = TRUE, 
+                   quiet = TRUE)
+d <- short_lt$data
+
+#Same for all_trials - any trials otherwise included but with short lt are reclassified as missing
+all_trials$short_lt <- all_trials$looking_time < 2
+
+short_lt <- exclude_by(all_trials, quo(short_lt), action = "NA out", 
+                   return_pcts = TRUE, 
+                   quiet = TRUE)
+all_trials <- short_lt$data
+```
+
+Based on our trial-length minimum, we also excluded `r short_lt$percent_trials$trial_sum` (`r round(short_lt$percent_trials$trial_mean*100, 2)`%) trials with total looking times shorter than 2 s. These trials are added back in and analyzed as "missing" in our planned analysis below. 
+
+
+```{r lab_exclusions}
+lab_contribs_post_exclusion <- d %>%
+  group_by(lab) %>%
+  summarise(n = length(unique(subid)))
+
+full_lab_set <- lab_contribs_pre_exclusion %>% pull(lab)
+
+include_lab_pre <- lab_contribs_pre_exclusion %>%
+  mutate(include = n >= 16) %>%
+  filter(include) %>%
+  pull(lab)
+
+include_lab_post <- lab_contribs_post_exclusion %>%
+  mutate(include = n >= 10) %>%
+  filter(include) %>%
+  pull(lab)
+
+n_labs_excluded_for_16_before_exclusions <- length(setdiff(full_lab_set, include_lab_pre))
+n_labs_excluded_for_10_after_exclusions <- length(setdiff(full_lab_set, include_lab_post))
+
+n_labs_excluded <- length(union(setdiff(full_lab_set, include_lab_pre),
+                                setdiff(full_lab_set, include_lab_post))) 
+
+d$include_lab <- d$lab %in% include_lab_pre & d$lab %in% include_lab_post
+#Use these include lists for all_trials as well!
+all_trials$include_lab <- all_trials$lab %in% include_lab_pre & all_trials$lab %in% include_lab_post
+
+labexcl <- exclude_by(d, quo(include_lab), 
+                      action = "include", return_pcts = TRUE, quiet = TRUE)
+
+d <- labexcl$data
+
+labexcl <- exclude_by(all_trials, quo(include_lab), 
+                      action = "include", return_pcts = TRUE, quiet = TRUE)
+
+all_trials <- labexcl$data
+```
+
+As discussed above, we included a lab's data if they were able to achieve the minimum N required for a half-sample and if, after exclusions, they contributed more than 10 data points. `r labexcl$percents$any_sum` (`r round(labexcl$percents$any_mean*100, 2)`%) infants from `r n_labs_excluded` labs were not included in the final sample because of this criterion.
+
+
+# Trial pairing (blinding, differences)
+
+Remove all training trials. There are a number of cases where there are missing stimulus numbers and trial types. This is problematic and needs to be checked. 
+
+For `all_trials` only, re-exclude trials *only* in cases where the reason was not fussiness. 
+
+```{r}
+d %>%
+  filter(trial_type != "TRAIN") %>%
+  group_by(lab, subid, stimulus_num) %>%
+  count %>%
+  filter(n > 2) %>%
+  datatable
+
+all_trials %>%
+  filter(trial_type != "TRAIN") %>%
+  group_by(lab, subid, stimulus_num) %>%
+  count %>%
+  filter(n > 2) %>%
+  datatable
+
+
+```
+
+Make sure that our trial pairs are not duplicated once we have removed these missing data and the training trials.  
+
+```{r}
+d <- filter(d, trial_type != "TRAIN", 
+            !is.na(trial_type))
+
+all_trials <- filter(all_trials, trial_type != "TRAIN", 
+            !is.na(trial_type))
+
+#
+trial_pairs <- d %>%
+  group_by(lab, subid, stimulus_num) %>%
+  count 
+
+see_if(all(trial_pairs$n <= 2), 
+            msg = "DUPLICATED TRIAL PAIRS")
+
+trial_pairs <- all_trials %>%
+  group_by(lab, subid, stimulus_num) %>%
+  count 
+
+see_if(all(trial_pairs$n <= 2), 
+            msg = "DUPLICATED TRIAL PAIRS")
+#NOTE This fails, but it's okay; these are due to non-fussiness errors
+```
+
+# Construct missing variable
+
+> To test for effects of moderators on the presence of missing data, we constructed a categorical variable (missing), which was true if a trial had no included looking time (e.g., no looking recorded, a look under 2 s, or no looking because the infant had already terminated the experiment). 
+
+There is probably a better place to construct this variable, but it depends on assumptions about the structure of the dataset, so it seemed safest to put it after all the validation and checking is done. 
+
+For the MB1 main dataset, this step fills in the dataset with blank rows and then reconstructed the key values necessary for main analyses. For the secondary dataset, we'd like to be more complete about generating subject-level values where they should exist! To make sure this goes correctly,
+check that no subjects get dropped during these processes.
+
+```{r}
+
+# Summarize n subjects again, count nonmissing trials
+# THEN drop non-fussy missing data!
+
+# Starting number of non-error trials (should match post imputation)
+old_d_count <- d %>%
+  filter(trial_error == FALSE) %>%
+  count
+
+old_at_count <- all_trials %>%
+  filter(trial_error == FALSE) %>%
+  count
+  
+#Select all participant-level variables and reduce them!
+
+d_trial_vals <- d %>%
+  ungroup() %>%
+  select(one_of('lab','subid','trial_num','usable_pair','short_lt','trial_error_change_reason', 'trial_error_recoded', 'trial_error_type', 'trial_error','looking_time', 'stimulus_num', 'trial_type')) 
+  
+d_participant_vals <- d %>%
+  ungroup() %>%
+  select(-one_of('trial_num','usable_pair','short_lt','trial_error_change_reason', 'trial_error_recoded', 'trial_error_type', 'trial_error','looking_time', 'stimulus_num', 'trial_type')) 
+
+d_participant_vals$count_na <- apply(d_participant_vals, 1, function(x) sum(is.na(x)))
+d_participant_vals <- d_participant_vals %>%
+  group_by(lab, subid) %>%
+  arrange( desc(count_na) ) %>% #Choose the row with the most info about this subject!
+  slice(1) %>%    # Pick the top 1 value
+  ungroup()
+
+#same for all_trials
+at_trial_vals <- all_trials %>%
+  ungroup() %>%
+  select(one_of('lab','subid','trial_num','usable_pair','short_lt','trial_error_change_reason', 'trial_error_recoded', 'trial_error_type', 'trial_error','looking_time', 'stimulus_num', 'trial_type')) 
+  
+at_participant_vals <- all_trials %>%
+  ungroup() %>%
+  select(-one_of('trial_num','usable_pair','short_lt','trial_error_change_reason', 'trial_error_recoded', 'trial_error_type', 'trial_error','looking_time', 'stimulus_num', 'trial_type')) 
+
+at_participant_vals$count_na <- apply(at_participant_vals, 1, function(x) sum(is.na(x)))
+at_participant_vals <- at_participant_vals %>%
+  group_by(lab, subid) %>%
+  arrange( desc(count_na) ) %>% 
+  slice(1) %>%    # Pick the top 1 value
+  ungroup()
+  
+
+#Remove 'messy' subject-level values and replace; check we didn't change number of rows yet!
+d_new <- merge(d_trial_vals, d_participant_vals)
+see_if(nrow(d_new) == nrow(d))
+d <- d_new
+
+at_new <- merge(at_trial_vals, at_participant_vals)
+see_if(nrow(at_new) == nrow(all_trials))
+all_trials <- at_new
+  
+#Now complete the cases!
+d <- d %>% 
+  ungroup %>%
+  complete(trial_num, nesting(lab, subid)) %>%
+  mutate(missing = is.na(looking_time) | looking_time < 2)
+
+all_trials <- all_trials %>% 
+  ungroup %>%
+  complete(trial_num, nesting(lab, subid)) %>%
+  mutate(missing = is.na(looking_time) | looking_time < 2)
+
+#Check nothing went wrong in merging/case completion
+new_d_count <- d %>%
+  filter(trial_error == FALSE) %>%
+  count
+see_if(old_d_count == new_d_count)
+
+new_at_count <- all_trials %>%
+  filter(trial_error == FALSE) %>%
+  count
+see_if(old_at_count == new_at_count)
+
+#Check all subjects have exactly 16 trials now!
+d %>%
+  group_by(lab, subid)%>%
+  summarize(count = n()) %>%
+  filter(count != 16)
+
+all_trials %>%
+  group_by(lab, subid)%>%
+  summarize(count = n()) %>%
+  filter(count != 16)
+
+#Finally, re-exclude from all_trials those trials that have non-fussiness trial errors - for our
+#purposes, THIS is the missing data! To do this, we read out and then hand-code all the
+#reasons given in trial_error_reasons as whether they are descriptions of behavior by someone other than the baby (e.g. experimenter error and family member interference). Cases that are ambigous
+# '(experiment ended early)' are retained. 
+
+write_csv(as.data.frame(unique(all_trials$trial_error_type)), 'metadata/trial_error_reasons.csv')
+trial_error_reasons <- read_csv('metadata/trial_error_reasons_coded.csv')
+
+all_trials <- merge(all_trials, trial_error_reasons) %>%
+  filter(!only_experimental_trial_error)
+
+```
+
+## DV calculation
+
+At this point, the 'missing' DV has been calculated (since it's a trial-level DV). Here, we'll construct
+the per-participant effect size (note that participants without at least TWO observations in each category cannot calculate cohen's D), and then, critically, scramble both so we can construct the remaining 
+analyses without being unblinded to results!
+
+```{r}
+#Constructing participant-level cohen's D
+d_part <- d %>%
+  filter(!missing) %>%
+  mutate(trial_type = as.factor(trial_type))%>%
+  group_by(lab, subid) %>%
+  summarize(count = n(), cohen_d = cohen.d(looking_time ~ trial_type)$estimate) %>%
+  filter(!is.na(cohen_d))
+
+d_part <- merge(d_part, d_participant_vals, all.y = FALSE)
+
+#BLINDING THE DATA
+all_trials <- all_trials %>%
+  ungroup() %>%
+  mutate(missing = base::sample(missing))
+
+d_part <- d_part %>%
+  ungroup() %>%
+  mutate(missing = base::sample(cohen_d))
+```
+
+Output. 
+
+```{r}
+write_csv(d_part, "processed_data/BLINDED_03_data_trial_effsize_allvars.csv")
+write_csv(all_trials, "processed_data/BLINDED_03_data_trial_missingness_allvars.csv")
+```

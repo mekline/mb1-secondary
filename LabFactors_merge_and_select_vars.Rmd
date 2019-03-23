@@ -1,0 +1,194 @@
+---
+title: "MB1 Exclusions"
+author: "The ManyBabies Analysis Team"
+date: '`r format(Sys.time(), "%a %b %d %X %Y")`'
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: yes
+---
+
+# Intro
+
+This script runs after `LabFactors_exclusion_imputation.Rmd`, and performs
+two key operations: merging in the lab-level characteristics, and calculating how much data we have on each of our variables of interest!
+
+Right now, it reads in BLINDED data!
+```{r setup, echo=FALSE, message=FALSE}
+source(here::here("helper/common.R"))
+source(here("helper/preprocessing_helper.R"))
+source(here("helper/secondary_helper.R"))
+```
+
+# Participant-level variables
+
+```{r read_data}
+eff_sizes <- read_csv(here("processed_data","BLINDED_03_data_trial_effsize_allvars.csv"))
+
+missingness <- read_csv(here("processed_data","BLINDED_03_data_trial_missingness_allvars.csv"))
+```
+
+
+#Lab-level IVs
+
+This reads in the processed/consolidated qualtrics information calculated
+in melsod/ManyBabies1-Qualtrics; sensitive variables (did you like the project etc) are removed from this version!
+
+```{r merge_data}
+labdata <-  read_tsv(here("processed_data","lab_qualtrics_merged_data.tsv"))
+```
+
+# IV Selection - Lab Level
+
+As preregistered, we will not attempt to examine *every* IV collected in MB1; we want to ensure that we have a reasonable level of observations. For variables at the level of the lab, this was defined as there being at least 10 observations total. So, begin by trimming the lab data down to such
+items!
+
+```{r select_labvars}
+enough_labs <- function(x) x>9
+labvars <- labdata %>%
+  summarise_all(funs(sum(!is.na(.)))) %>%
+  select_if(enough_labs)
+
+labdata <- labdata %>%
+  select(one_of(names(labvars)))
+```
+
+Similarly, participant-level variables are only retained when there are at 
+least 100 participants, from 10 labs for that variable. Note that we run these calculations separately for eff_sizes and missingness, to avoid dropping variables present in only one of those sets (e.g. cohens_d, missingness!)
+
+```{r select_partvars}
+enough_parts <- function(x) x>99
+partvars_bypart <- eff_sizes %>%
+  summarise_all(funs(sum(!is.na(.)))) %>%
+  select_if(enough_parts)
+  
+partvars_bylab <- eff_sizes %>%
+  group_by(lab)%>%
+  summarise_all(funs(sum(!is.na(.)))) %>%
+  summarise_all(funs(sum(.>0))) %>%
+  select_if(enough_labs)
+
+partvars = intersect(names(partvars_bylab), names(partvars_bypart))
+
+eff_sizes <- eff_sizes %>%
+  select(one_of(partvars))
+
+partvars_bypart <- missingness %>%
+  group_by(lab, subid)%>%
+  summarise_all(funs(sum(!is.na(.)))) %>%
+  ungroup() %>%
+  summarise_all(funs(sum(.>0))) %>%
+  select_if(enough_parts)
+  
+partvars_bylab <- missingness %>%
+  group_by(lab)%>%
+  summarise_all(funs(sum(!is.na(.)))) %>%
+  summarise_all(funs(sum(.>0))) %>%
+  select_if(enough_labs)
+
+partvars = intersect(names(partvars_bylab), names(partvars_bypart))
+
+missingness <- missingness %>%
+  select(one_of(partvars))
+```
+
+Together, these variables constitute the 'ragged' datasets - many NA values
+will appear, but a minimum of data is guaranteed to be present for each. This
+supports purely variable-by-variable exploratory analyses. 
+
+Merging together to create the full variables sets:
+
+```{r merge}
+eff_sizes <- merge(eff_sizes, labdata, all.x = TRUE, all.y = FALSE)
+missingness <- merge(missingness, labdata, all.x = TRUE, all.y = FALSE)
+
+# Check that the only differences in these two datasets are the variables
+# that only apply to one of the datasets!
+setdiff(names(eff_sizes_summary), names(missingness_summary))
+setdiff(names(missingness_summary), names(eff_sizes_summary))
+```
+
+We preregistered an expectation that a subset of labs would contribute
+more variables, and that a subset of variables would be reported by more
+labs. To create a more regular dataset that might support analyses made
+difficult by frequent NAs, we identify a sub-set of labs and variables such that 80% of babies in those labs have data for 80% of the variables
+
+```{r subset-vars-and-labs}
+#By lab, record the % of babies who have data for that variable
+
+eff_sizes_summary <- eff_sizes %>%
+  group_by(lab) %>%
+  summarise_all(funs(mean(!is.na(.))))
+  
+
+missingness_by_baby <- missingness %>%
+  group_by(lab, subid) %>%
+  slice(1)
+
+missingness_summary <- missingness_by_baby %>%
+  group_by(lab) %>%
+  summarise_all(funs(mean(!is.na(.))))
+
+# Trim to 80/80 dataset!
+
+#Skipping for now!
+```
+
+Finally, output the two 'preps' of these datasets
+
+1. ragged - contains all variables that had observations from at least 
+10 labs and at least 100 participants
+
+2. dense - contains the subset of labs & variables resulting in <20% NA
+for all variables! (TBD)
+
+
+THERE IS A DEMON. ALL LABVARS DISAPPEAR FOR SOME REASON.
+# ```{r output}
+# write_csv(eff_sizes, "processed_data/BLINDED_03_data_trial_effsize_ragged.csv")
+# write_csv(missingness, "processed_data/BLINDED_03_data_trial_missingness_ragged.csv")
+# ```
+
+```{r}
+eff_sizes <- eff_sizes %>%
+  select(-one_of('count', 'count_na', 'session_error_recoded', 'session_error_change_reason', 'session_error_type_recoded', 'out_of_age', 'include_lab', 'pilot'))
+
+missingness <- missingness %>%
+  select(-one_of('count_na', 'session_error_recoded', 'session_error_change_reason', 'session_error_type_recoded', 'out_of_age', 'include_lab', 'count_na', 'trial_error_change_reason', 'trial_error_recoded', 'pilot', 'only_experimental_trial_error' ))
+```
+
+```{r}
+
+missingness_by_baby <- missingness %>%
+  group_by(lab, subid) %>%
+  slice(1)
+
+missingness_num_parts <- missingness_by_baby %>%
+  ungroup() %>%
+  summarise_all(funs(sum(!is.na(.)))) 
+
+missingness_num_labs <- missingness_by_baby %>%
+  group_by(lab)%>%
+  summarise_all(funs(sum(!is.na(.)))) %>%
+  summarise_all(funs(sum(.>0)))
+  
+#And put those all in a tibble
+var_tibble <- as_tibble(cbind(vars = names(missingness), reported_by_lab = t(missingness_num_labs), reported_by_parts = t(missingness_num_parts)))
+
+names(var_tibble) <- c('vars', 'labs_reporting', 'participants_reporting')
+
+#Read out and classify variables!
+write_csv(var_tibble, 'metadata/variables_ragged.csv')
+
+var_tibble <- read_csv('metadata/variables_ragged_coded.csv')
+```
+
+
+```{r report-vars}
+
+part_vars <- filter(var_tibble, var_type == 'LabFactor_Part')
+
+lab_vars <- filter(var_tibble, var_type == 'LabFactor_Lab')
+```
+

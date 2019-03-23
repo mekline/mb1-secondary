@@ -1,0 +1,214 @@
+trial_error_type,only_experimental_trial_error
+NA,FALSE
+software problem,TRUE
+experiment ended early,FALSE
+software did not record,TRUE
+fussy,FALSE
+very fussy,FALSE
+uninterested; playing with feet,FALSE
+No error,FALSE
+not recorded,TRUE
+crying,FALSE
+parent interference,TRUE
+experimenter error,TRUE
+background noise,TRUE
+fuzziness,FALSE
+child did not look at the screen following AG,FALSE
+the baby did not fixate on the green light,FALSE
+too fussy,FALSE
+parental interference: the parent turned the baby towards the side light when it started and held the baby turned in that direction,TRUE
+parental interference: the parent directed the baby's attention to the side; the parent is holding the baby turned more towards the side,TRUE
+parental intereference: the parent is directing to the side; holding more to the side,TRUE
+parental interference: the parent directed the baby's attention to the side light before the audio started,TRUE
+experimenter error: the baby looked away for less than 2 seconds but the experimenter stopped the trial,TRUE
+the baby did not fixate on the red light,FALSE
+eating something,FALSE
+not attending,FALSE
+equipment failure,TRUE
+interference,TRUE
+playing with toy,FALSE
+experiment interrupted early,TRUE
+experimentor error,TRUE
+fussy baby,FALSE
+see session error,FALSE
+baby fussed,FALSE
+baby cried,FALSE
+baby cries,FALSE
+experiment ended,FALSE
+Pariticpant Error,FALSE
+Participant Error,FALSE
+participant error,FALSE
+no looking in this trial,FALSE
+parental interference,TRUE
+baby didn't look until experimentor forced trial to begin,FALSE
+baby never looked,FALSE
+crying a bit,FALSE
+crying again,FALSE
+crying a bit and spitting out milk a bit,FALSE
+distracted,FALSE
+Tech malfunction,TRUE
+Experimenter error,TRUE
+parent interruption,TRUE
+nodata,FALSE
+Parental interference,TRUE
+audible noise,TRUE
+restless child,FALSE
+pointing,FALSE
+experimenter,TRUE
+parent stopped experiment,TRUE
+baby not in lap,FALSE
+mom interfered,TRUE
+off the camera,TRUE
+experimentor error- forgot to hit record,TRUE
+fussy- squirmed out of camera view,FALSE
+obstructed view of baby's eyes,FALSE
+Trial after interference,FALSE
+infant not looking,FALSE
+mother speaks,TRUE
+fussy at the end,FALSE
+fussy at the end/mother speaks,FALSE
+parent unblinded,TRUE
+infant distracted,FALSE
+fussy/mother speaks,FALSE
+infant falls down,FALSE
+infant not seated,FALSE
+infant fussy/ mother speaks,FALSE
+not seated,FALSE
+mother speaks and interferes,TRUE
+mother distracts the infant,TRUE
+mother makes noise,TRUE
+mother interferes,TRUE
+infant falls of the seat,FALSE
+experimenter's interference,TRUE
+bad eye-tracking data,FALSE
+parent's interference,TRUE
+no eye-tracking data,TRUE
+baby crying,FALSE
+infant too young,TRUE
+experiment paused shortly,TRUE
+infant too old,TRUE
+got fussy and ended early,FALSE
+baby re-positioned,FALSE
+volume is too low,TRUE
+volume goes out,TRUE
+no eyetracking data,TRUE
+missing jHab data,TRUE
+ended early,FALSE
+"tobiistudio error, no pick up of eyes but still played videos and got data from jHab",TRUE
+no jhab data,TRUE
+got fussy and ended session early,FALSE
+loses his/her dummy,FALSE
+"switched to lap, exclude",FALSE
+"crying, no looking",FALSE
+"cell was repeated, IDS3 was not tested",TRUE
+parent intereference/infant fussy,TRUE
+Procedural Error,TRUE
+Parental Interference,TRUE
+Trial ran after break,FALSE
+Equipment Error,TRUE
+Equipment error,TRUE
+Fuss out,FALSE
+No Coding,TRUE
+Equipment failure,TRUE
+Noise Interference,TRUE
+Inattentive,FALSE
+Fuss Out,FALSE
+Calibration difficulties,TRUE
+Exclude,FALSE
+exclude,FALSE
+fuss out,FALSE
+WISP software error,TRUE
+inattentiveness,FALSE
+trial skipped,TRUE
+experimenter ended experiment,TRUE
+no look,FALSE
+experimenter ended trial too early,TRUE
+trial should have ended earlier,TRUE
+tracking error,TRUE
+experimenter began trial too early,TRUE
+"fussy, trial not watched",FALSE
+mom and baby stood up,TRUE
+participant left room,TRUE
+parent stopped the study,TRUE
+fussout,FALSE
+headphones unplugged trial 12,TRUE
+baby turned off side monitor with 5 trials left,FALSE
+baby unplugged headphones trial 11,FALSE
+wiggly,FALSE
+Couldn't get data,TRUE
+couldn't get data,TRUE
+out of frame,TRUE
+"restless, parent interference",FALSE
+no look at attention getter,FALSE
+too fussy/ parent interference,FALSE
+too fussy/restless,FALSE
+child uninterested,FALSE
+unattentive,FALSE
+software issues: program could not be started,TRUE
+restless,FALSE
+restless/parent interference,FALSE
+too fussy/ restless,FALSE
+starts to cry,FALSE
+too fussy/ uninterested,FALSE
+attention on pacifier,FALSE
+too fussy/ starts to cry,FALSE
+no record,TRUE
+repeated trial,TRUE
+too fussy and no record,FALSE
+Baby started crying,FALSE
+Baby crying loudly. I stopped experiment,FALSE
+Experiment ended early,FALSE
+Baby starts crying,FALSE
+Baby crying,FALSE
+Child starts crying,FALSE
+Mom conforts him by tickling feet. Child is distracted with mom's hands and his own feet,FALSE
+Child is distracted with mom's hands and his own feet. He's still very restless,FALSE
+"Baby got distracted by the dad, who was peaking from behind the curtain",FALSE
+Mom asked to stop experiment,TRUE
+"Experimental error: Experimenter pressed ' look' button right away after baby turned head a little, but baby never totally looked at the light",TRUE
+"Baby crying, mom conforting her",FALSE
+Parent intervening,TRUE
+Baby is very fussy,FALSE
+Mom distracted baby by removing her bib,TRUE
+Baby very squirmy,FALSE
+Baby start crying. I stopped experiment,FALSE
+Baby got out of camera range,TRUE
+N/A,FALSE
+ended experiment early,FALSE
+experiment ended early because baby fussed out,FALSE
+too fussy / parent interference,FALSE
+experimenter's masking music played quietly but audibly during this trial,TRUE
+parent inference,TRUE
+Experiment,TRUE
+Participant,FALSE
+Parent interference,TRUE
+Parent,TRUE
+Fussed out,FALSE
+fusiness,FALSE
+hidden eyes,FALSE
+technical error,TRUE
+no data,TRUE
+mother interaction,TRUE
+sound problem,TRUE
+light,TRUE
+noise,TRUE
+looking,FALSE
+Infant's eyes not fully visible,FALSE
+Child fussed out and momentarily turned away,FALSE
+Child fussed out and cried,FALSE
+Child moved about momentarily,FALSE
+fussed,FALSE
+fell asleep,FALSE
+experiement ended early,FALSE
+"""experimenter interference""",TRUE
+"""fussy""",FALSE
+"""experimenter interference""; ""parent interference""",TRUE
+"""experimenter error""",TRUE
+"""parent interference""",TRUE
+"""procedure error""",TRUE
+programming error,TRUE
+to fussy,FALSE
+parent intervention,TRUE
+calibration/tracking not possible,TRUE
+parent inteference,TRUE
+"parent interference, technical error",TRUE
